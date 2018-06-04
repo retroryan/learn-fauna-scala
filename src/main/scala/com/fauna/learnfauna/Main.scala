@@ -60,32 +60,17 @@ object Main extends App with Logging {
    */
   val TEST_DB = "TestDB"
 
-  val testClient = {
-    val databaseRequest = adminClient.query(
-      If(
-        Exists(Database(TEST_DB)),
-        Get(Database(TEST_DB)),
-        CreateDatabase(Obj("name" -> TEST_DB))
-      )
-    )
-    val createDBResponse = await(databaseRequest)
-    logger.info(s"Created database: $TEST_DB :: \n${JsonUtil.toJson(createDBResponse)}")
+  var queryResponse = adminClient.query(
+    CreateDatabase(Obj("name" -> TEST_DB))
+  )
+  Await.result(queryResponse, Duration.Inf)
+  logger.info(s"Created database: ${TEST_DB} :: \n${JsonUtil.toJson(queryResponse)}")
 
-    val keyReq = adminClient.query(CreateKey(Obj("database" -> Database(TEST_DB), "role" -> "server")))
-      .flatMap { value =>
-        val secretEither = value("secret").to[String].toEither
-        val secretTry = secretEither.left.map(x => new Exception(s"errs ${x}")).toTry
-        Future.fromTry(secretTry)
-      }
-    val serverKey = await(keyReq)
-    adminClient.close
-    FaunaClient(serverKey, faunaDBConfig.endPoint)
-  }
 
   /*
    * Delete the Database that we created
    */
-  val deleteResponse = testClient.query(
+  val deleteResponse = adminClient.query(
     If(
       Exists(Database(TEST_DB)),
       Delete(Database(TEST_DB)),
@@ -98,13 +83,11 @@ object Main extends App with Logging {
   /*
    * Just to keep things neat and tidy, close the client connection
    */
-  testClient.close()
+  adminClient.close()
 
   logger.info("Disconnected from FaunaDB as Admin!")
 
   // add this at the end of execution to make things shut down nicely
   System.exit(0)
-
-  def await[T](f: Future[T]): T = Await.result(f, 5.second)
 }
 
