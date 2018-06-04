@@ -20,6 +20,7 @@ package com.fauna.learnfauna
  * These imports are for basic functionality around logging and JSON handling and Futures.
  * They should best be thought of as a convenience items for our demo apps.
  */
+
 import grizzled.slf4j.Logging
 
 import scala.concurrent.duration.Duration
@@ -27,18 +28,19 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
 import faunadb.query._
-import faunadb.values._
 
 /*
  * These are the required imports for Fauna.
  *
- * For these examples we are using the 2.1.0 version of the JVM driver. Also notice that we aliasing
+ * For these examples we are using the 2.2.0 version of the JVM driver. Also notice that we aliasing
  * the query and values part of the API to make it more obvious we we are using Fauna functionality.
  *
  */
-import faunadb.{FaunaClient, query => q}
+
+import faunadb.FaunaClient
 
 object Main extends App with Logging {
+
   import ExecutionContext.Implicits._
 
   /*
@@ -83,10 +85,10 @@ object Main extends App with Logging {
   /*
    * Delete the Database that we created
    */
-    val deleteResponse = testClient.query(
-    q.If(
-      q.Exists(q.Database(TEST_DB)),
-      q.Delete(q.Database(TEST_DB)),
+  val deleteResponse = testClient.query(
+    If(
+      Exists(Database(TEST_DB)),
+      Delete(Database(TEST_DB)),
       true
     )
   )
