@@ -25,7 +25,7 @@ An alternative is to use the FaunaDB Cloud. You can follow the instructions [her
 
 These  examples were developed using the various versions of the JetBrains tools including IntelliJ. If you use these tools you should be able to import the projects directly.
 
-## Lesson1 - Connect and Create a DB
+## [Lesson1 - Connect and Create a DB](https://github.com/retroryan/learn-fauna-scala/tree/lesson1)
 
 In branch **lesson1**
 
