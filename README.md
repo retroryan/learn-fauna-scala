@@ -25,16 +25,28 @@ An alternative is to use the FaunaDB Cloud. You can follow the instructions [her
 These  examples were developed using the various versions of the JetBrains tools including IntelliJ. If you use these tools you should be able to import the projects directly.
 
 ## Lesson1 - Connect and Create a DB
-Introduced in this example is a connection to the FaunaDb using the "admin" client. We also use this client to create and delete a database. 
+
+In branch *lesson1*
+
+Introduced in this example is a connection to the FaunaDb using the "admin" client. We also use this client to create and delete a database.
 
 The remaining lessons are developed in the context of a simple ledger data model. The examples will leverage the concept of 'customers' and 'transactions'.
 
 ## Lesson2 - Connect, Create DB, Schema, Index and perform basic CRUD activities.
+
+In branch *lesson2*
+
 Securely connect to a specific DB and build out a simple ledger schema including an index that allows us to access records by id. We create a record, read it, update it, read it, and then delete the record. So simple CRUD activity.
 Of note, notice that DB creation takes advantage of the ability to include logic in a query request. In this case we are checking the existence of the database before creating and deleting if necessary.
 
 ## Lesson3 - Query Patterns and New Index Types
+
+In branch *lesson3*
+
 Deeper dive into query patterns using indexes. Specifically we add a new index type using values as opposed to terms. This will allow us to perform range style queries. Many of the examples take advantage of this approach. Also included are examples of using the various composite commands including mapping functions within the client query. Finally in this Lesson exmplore aa more general example of paging across all the instances in a calss.
 
 ## Lesson4 - Complex Transactions and Instance Member Access
+
+In branch *lesson4*
+
 This lessons presents a couple of new more advanced interactions. The first is a general approach to creating a larger set of instances by passing logic down to the DB. Also developed is an example of accessing individual members returned from a query. Finally we introduce a simple version of a complex transaction that demonstrates a double entry ledger style transaction. This example introduces a number of new Fauna Query Language commands.

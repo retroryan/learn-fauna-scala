@@ -38,7 +38,7 @@ import faunadb.values._
  */
 import faunadb.{FaunaClient, query => q}
 
-object Lesson1 extends App with Logging {
+object Main extends App with Logging {
   import ExecutionContext.Implicits._
 
   /*
