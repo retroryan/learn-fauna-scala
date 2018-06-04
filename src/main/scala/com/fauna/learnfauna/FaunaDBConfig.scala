@@ -16,34 +16,35 @@
  */
 
 package com.fauna.learnfauna
+
 /*
  * Read and set connection information so it does not have to be repeated in all of the examples
  */
 
 import com.typesafe.config.ConfigFactory
+import net.ceedubs.ficus.Ficus._
+import net.ceedubs.ficus.readers.ValueReader
+
+
+case class FaunaDBConfig(endPoint: String, secret: String)
 
 object FaunaDBConfig {
-  def getConfig = {
 
-    val systemConfig = ConfigFactory.load()
+  def getFaunaDBConfig:FaunaDBConfig = {
+    val config = ConfigFactory.load()
+    config.as[FaunaDBConfig]("fauna")
+  }
 
-    val rootKey = Option(systemConfig.getString("FAUNA_ROOT_KEY")) getOrElse {
-      "secret"
-    }
-    val scheme = Option(systemConfig.getString("FAUNA_SCHEME")) getOrElse {
-      "http"
-    }
-    val domain = Option(systemConfig.getString("FAUNA_DOMAIN")) getOrElse {
-      "127.0.0.1"
-    }
-    val port = Option(systemConfig.getString("FAUNA_PORT")) getOrElse {
-      "8443"
-    }
 
-    collection.Map(
-      "root_token" -> rootKey,
-      "root_url" -> s"${scheme}://${domain}:${port}"
+  implicit val reader: ValueReader[FaunaDBConfig] = ValueReader.relative[FaunaDBConfig] { config =>
+    val host = config.getString("host")
+    val port = config.getInt("port")
+    val scheme = config.getString("scheme")
+    val secret = config.getString("secret")
+
+    FaunaDBConfig(
+      s"$scheme://$host:$port",
+      secret
     )
-
   }
 }

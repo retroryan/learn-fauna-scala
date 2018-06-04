@@ -22,8 +22,12 @@ package com.fauna.learnfauna
  */
 import grizzled.slf4j.Logging
 
-import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration._
+
+import faunadb.query._
+import faunadb.values._
 
 /*
  * These are the required imports for Fauna.
@@ -32,7 +36,7 @@ import scala.concurrent.duration.Duration
  * the query and values part of the API to make it more obvious we we are using Fauna functionality.
  *
  */
-import faunadb.{FaunaClient, query => q, values =>v}
+import faunadb.{FaunaClient, query => q}
 
 object Lesson1 extends App with Logging {
   import ExecutionContext.Implicits._
@@ -44,44 +48,61 @@ object Lesson1 extends App with Logging {
    *  - remove the 'endpoint = endPoint' line below
    *  - substitute your secret for "secret" below
    */
-  val endPoint = "http://127.0.0.1:8443"
-  val secret = "secret"
-  val adminClient = FaunaClient(endpoint = endPoint, secret = secret)
+  val faunaDBConfig = FaunaDBConfig.getFaunaDBConfig
+  val adminClient = FaunaClient(faunaDBConfig.secret, faunaDBConfig.endPoint)
 
   logger.info("Succesfully connected to FaunaDB as Admin!")
 
   /*
    * Create a database
    */
-  val dbName = "TestDB"
+  val TEST_DB = "TestDB"
 
-  var queryResponse = adminClient.query(
-    q.CreateDatabase(q.Obj("name" -> dbName))
-  )
-  Await.result(queryResponse, Duration.Inf)
-  logger.info(s"Created database: ${dbName} :: \n${JsonUtil.toJson(queryResponse)}")
+  val testClient = {
+    val databaseRequest = adminClient.query(
+      If(
+        Exists(Database(TEST_DB)),
+        Get(Database(TEST_DB)),
+        CreateDatabase(Obj("name" -> TEST_DB))
+      )
+    )
+    val createDBResponse = await(databaseRequest)
+    logger.info(s"Created database: $TEST_DB :: \n${JsonUtil.toJson(createDBResponse)}")
+
+    val keyReq = adminClient.query(CreateKey(Obj("database" -> Database(TEST_DB), "role" -> "server")))
+      .flatMap { value =>
+        val secretEither = value("secret").to[String].toEither
+        val secretTry = secretEither.left.map(x => new Exception(s"errs ${x}")).toTry
+        Future.fromTry(secretTry)
+      }
+    val serverKey = await(keyReq)
+    adminClient.close
+    FaunaClient(serverKey, faunaDBConfig.endPoint)
+  }
 
   /*
    * Delete the Database that we created
    */
-  queryResponse = adminClient.query(
+    val deleteResponse = testClient.query(
     q.If(
-      q.Exists(q.Database(dbName)),
-      q.Delete(q.Database(dbName)),
+      q.Exists(q.Database(TEST_DB)),
+      q.Delete(q.Database(TEST_DB)),
       true
     )
   )
-  Await.result(queryResponse, Duration.Inf)
-  logger.info(s"Deleted database: ${dbName} :: \n${JsonUtil.toJson(queryResponse)}")
+  Await.result(deleteResponse, Duration.Inf)
+  logger.info(s"Deleted database: ${TEST_DB} :: \n${JsonUtil.toJson(deleteResponse)}")
 
   /*
    * Just to keep things neat and tidy, close the client connection
    */
-  adminClient.close()
+  testClient.close()
 
   logger.info("Disconnected from FaunaDB as Admin!")
 
   // add this at the end of execution to make things shut down nicely
   System.exit(0)
+
+  def await[T](f: Future[T]): T = Await.result(f, 5.second)
 }
 
