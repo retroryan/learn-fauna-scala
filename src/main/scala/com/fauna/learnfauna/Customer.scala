@@ -64,21 +64,15 @@ object Customer extends Logging {
     futureResult
   }
 
-  def createListCustomer(customerList:Seq[Customer])(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
+  def createListCustomer(customerList:Seq[Customer])(implicit client: FaunaClient, ec: ExecutionContext) = {
 
     /*
      * Create a list of customer (records) using the customer codec
      *
-     * Converting seq to a splat doesn't work, i.e. -> Arr(customerList : _*)
-     *
-     * Hard coding 3 customers in as a temp solution, clearly not correct.  change to splat?
      */
-
-    assert(customerList.size >= 3)
-
     val futureResult = client.query(
       Foreach(
-        Arr(customerList(1),customerList(2),customerList(3)),
+        customerList,
         Lambda { customer =>
           Create(
             Class(CUSTOMER_CLASS),
@@ -195,5 +189,3 @@ object Customer extends Logging {
     }
   }
 }
-
-
