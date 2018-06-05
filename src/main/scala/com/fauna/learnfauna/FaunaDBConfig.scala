@@ -26,7 +26,7 @@ import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ValueReader
 
 
-case class FaunaDBConfig(endPoint: String, secret: String)
+case class FaunaDBConfig(endPoint: String, secret: String, deleteDB:Boolean)
 
 object FaunaDBConfig {
 
@@ -41,10 +41,12 @@ object FaunaDBConfig {
     val port = config.getInt("port")
     val scheme = config.getString("scheme")
     val secret = config.getString("secret")
+    val deleteDB = config.getBoolean("delete_db")
 
     FaunaDBConfig(
       s"$scheme://$host:$port",
-      secret
+      secret,
+      deleteDB
     )
   }
 }

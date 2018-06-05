@@ -34,6 +34,7 @@ import scala.concurrent.duration._
  * the query and values part of the API to make it more obvious we we are using Fauna functionality.
  *
  */
+
 import faunadb.query._
 import faunadb.FaunaClient
 
@@ -47,69 +48,99 @@ object Main extends App with Logging {
   val LEDGER_DB = "LedgerExample"
 
   //This is the main functionality of lessong 2 - create a fauna client and run the customer tests
+  logger.info("starting customer tests")
   val faunaClient = createFaunaClient
 
-  val customer = new Customer(faunaClient)
-  customer.createSchema()
-  customer.createCustomer(0, 100)
-  customer.readCustomer(0)
-  customer.updateCustomer(0, 200)
-  customer.readCustomer(0)
-  customer.deleteCustomer(0)
+  val customer = Customer(faunaClient)
+
+
+  /*faunaClient.foreach { faunaClient =>
+
+    val customer = new Customer(faunaClient)
+    customer.createSchema()
+    customer.createCustomer(0, 100)
+    customer.readCustomer(0)
+    customer.updateCustomer(0, 200)
+    customer.readCustomer(0)
+    customer.deleteCustomer(0)
+**/
 
   /*
-   * Just to keep things neat and tidy, close the client connection
-   */
-  faunaClient.close()
+ * Just to keep things neat and tidy, close the client connection
+ */
+  //  faunaClient.close()
 
-  logger.info("Disconnected from FaunaDB as Admin!")
+  //  logger.info("Disconnected from FaunaDB!")
 
   // add this at the end of execution to make things shut down nicely
+
+  //wait for the fauna client
+  await(customer)
+
+  logger.info("finished customer tests")
+
   System.exit(0)
 
-
   def createFaunaClient: FaunaClient = {
+    logger.info("starting create fauna client")
+
     val faunaDBConfig = FaunaDBConfig.getFaunaDBConfig
 
     //Create an admin client. This is the client we will use to create the database
     val adminClient = FaunaClient(faunaDBConfig.secret, faunaDBConfig.endPoint)
     logger.info("Succesfully connected to FaunaDB as Admin!")
 
-    /*
-    * The code below creates the Database that will be used for this example. Please note that
-    * the existence of the database is evaluated and only created if it does not exist in a single
-    * call to the Fauna DB.
-    */
-    val databaseRequest = adminClient.query(
-      If(
-        Exists(Database(LEDGER_DB)),
-        Get(Database(LEDGER_DB)),
-        CreateDatabase(Obj("name" -> LEDGER_DB))
-      )
-    )
-    val createDBResponse = await(databaseRequest)
-    logger.info(s"Created database: $LEDGER_DB :: \n${JsonUtil.toJson(createDBResponse)}")
+    val databaseRequest = createFaunaDatabase(faunaDBConfig, adminClient)
 
-    val futureKeyValue = adminClient.query(CreateKey(Obj("database" -> Database(LEDGER_DB), "role" -> "server")))
+    //only block on startup when we create the database
+    val createDBResponse = await(databaseRequest)
+
+    logger.info(s"Created database: $LEDGER_DB :: \n${JsonUtil.toJson(createDBResponse)}")
 
     /*
     * Create a key specific to the database we just created. We will use this to
     * create a new client we will use in the remainder of the examples.
     */
-    val keyReq = futureKeyValue
-      .flatMap { value =>
-        val secretEither = value("secret").to[String].toEither
-        val secretTry = secretEither.left.map(x => new Exception(s"errs ${x}")).toTry
-        Future.fromTry(secretTry)
+    await(databaseRequest)
+    val keyReq = adminClient.query(CreateKey(Obj("database" -> Database(LEDGER_DB), "role" -> "server")))
+      .flatMap { v =>
+        Future.fromTry(v("secret").to[String].toEither.left.map(x => new Exception(s"errs ${x}")).toTry)
       }
-
     val serverKey = await(keyReq)
     adminClient.close
-    //Create a fauna client specific to the DB using the server key just created.
     FaunaClient(serverKey, faunaDBConfig.endPoint)
   }
 
-
+  /*
+  * The code below creates the Database that will be used for this example. Please note that
+  * the existence of the database is  evaluated and one of two options is followed in a single call to the Fauna DB:
+  * --- If the DB already exists, just return the existing DB
+  * --- Or delete the existing DB and recreate
+  */
+  private def createFaunaDatabase(faunaDBConfig: FaunaDBConfig, adminClient: FaunaClient) = {
+    if (faunaDBConfig.deleteDB) {
+      logger.info(s"deleting existing database")
+      adminClient.query(
+        Arr(
+          If(
+            Exists(Database(LEDGER_DB)),
+            Delete(Database(LEDGER_DB)),
+            true
+          ),
+          CreateDatabase(Obj("name" -> LEDGER_DB)))
+      )
+    }
+    else {
+      logger.info(s"creating or getting database")
+      adminClient.query(
+        If(
+          Exists(Database(LEDGER_DB)),
+          Get(Database(LEDGER_DB)),
+          CreateDatabase(Obj("name" -> LEDGER_DB))
+        )
+      )
+    }
+  }
 
   def await[T](f: Future[T]): T = Await.result(f, 5.second)
 }

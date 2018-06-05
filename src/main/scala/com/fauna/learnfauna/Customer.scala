@@ -20,10 +20,11 @@ package com.fauna.learnfauna
  * These imports are for basic functionality around logging and JSON handling and Futures.
  * They should best be thought of as convenience items for our demo apps.
  */
+
 import grizzled.slf4j.Logging
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 /*
  * These are the required imports for Fauna.
@@ -32,6 +33,7 @@ import scala.concurrent.{Await, ExecutionContext}
  * the query and values part of the API to make it more obvious we we are using Fauna functionality.
  *
  */
+
 import faunadb.FaunaClient
 import faunadb.query._
 
@@ -40,36 +42,7 @@ class Customer(val client: FaunaClient) extends Logging {
 
   import ExecutionContext.Implicits._
 
-  def createSchema (): Unit = {
-    /*
-     * Create an class to hold customers
-     */
-    val result = client.query(
-      CreateClass(Obj("name" -> "customers"))
-    )
-    Await.result(result, Duration.Inf)
-    logger.info(s"Created customer class :: \n${JsonUtil.toJson(result)}")
-
-    /*
-     * Create the Indexes within the database. We will use these to access record in later lessons
-     */
-    val result2 = client.query(
-      Arr(
-        CreateIndex(
-          Obj(
-            "name" -> "customer_by_id",
-            "source" -> Class("customers"),
-            "unique" -> true,
-            "terms" -> Arr(Obj("field" -> Arr("data", "id")))
-          )
-        )
-      )
-    )
-    Await.result(result2, Duration.Inf)
-    logger.info(s"Created customer_by_id index :: \n${JsonUtil.toJson(result2)}")
-  }
-
-  def createCustomer (custID: Int, balance: Int): Unit = {
+  def createCustomer(custID: Int, balance: Int): Unit = {
     /*
      * Create a customer (record)
      */
@@ -82,7 +55,7 @@ class Customer(val client: FaunaClient) extends Logging {
     logger.info(s"Create \'customer\' ${custID}: \n${JsonUtil.toJson(result)}")
   }
 
-  def readCustomer (custID: Int): Unit = {
+  def readCustomer(custID: Int): Unit = {
     /*
      * Read the customer we just created
      */
@@ -93,7 +66,7 @@ class Customer(val client: FaunaClient) extends Logging {
     logger.info(s"Read \'customer\' ${custID}: \n${JsonUtil.toJson(result)}")
   }
 
-  def updateCustomer (custID: Int, newBalance: Int): Unit = {
+  def updateCustomer(custID: Int, newBalance: Int): Unit = {
     /*
      * Update the customer
      */
@@ -120,4 +93,54 @@ class Customer(val client: FaunaClient) extends Logging {
     logger.info(s"Delete \'customer\' ${custID}: \n${JsonUtil.toJson(result)}")
   }
 }
+
+object Customer extends Logging {
+
+  val CUSTOMER_CLASS = "customers"
+  val CUSTOMER_INDEX = s"$CUSTOMER_CLASS-by-name"
+
+  def apply(client: FaunaClient)(implicit ec: ExecutionContext): Future[Customer] = {
+    logger.info("starting customer create schema")
+
+    /*
+     * Create an class to hold customers
+     */
+    val customerObj = Class(CUSTOMER_CLASS)
+    val createCustomer = CreateClass(Obj("name" -> CUSTOMER_CLASS))
+    val conditionalCreateCustomer = If(
+      Exists(customerObj),
+      Get(customerObj),
+      CreateClass(Obj("name" -> CUSTOMER_CLASS))
+    )
+
+    val indexObj = Index(CUSTOMER_INDEX)
+    val createCustomerIndex = CreateIndex(
+      Obj(
+        "name" -> CUSTOMER_INDEX,
+        "source" -> Class(CUSTOMER_CLASS),
+        "unique" -> true,
+        "terms" -> Arr(Obj("field" -> Arr("data", "id")))
+      )
+    )
+
+    /*
+    * Create the Indexes within the database. We will use these to access record in later lessons
+    */
+    val createIndex = If(
+      Exists(indexObj),
+      Get(indexObj),
+      createCustomerIndex
+    )
+
+    for {
+      createClassResult <- client.query(createCustomer)
+      createIndexResult <- client.query(createIndex)
+    } yield {
+      logger.info(s"Created customer class :: \n${JsonUtil.toJson(createClassResult)}")
+      logger.info(s"Created customer_by_id index :: \n${JsonUtil.toJson(createIndexResult)}")
+      new Customer(client)
+    }
+  }
+}
+
 
