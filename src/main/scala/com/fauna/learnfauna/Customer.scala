@@ -41,14 +41,13 @@ case class Customer(custID: Int, balance: Int)
 
 object Customer extends Logging {
 
-  import ExecutionContext.Implicits._
 
   val CUSTOMER_CLASS = "customers"
   val CUSTOMER_INDEX = s"$CUSTOMER_CLASS-by-name"
 
   implicit val userCodec: Codec[Customer] = Codec.caseClass[Customer]
 
-  def createCustomer(customer:Customer)(implicit client:FaunaClient): Future[Value] = {
+  def createCustomer(customer:Customer)(implicit client:FaunaClient, ec: ExecutionContext): Future[Value] = {
     /*
      * Create a customer (record) using the customer codec
      */
@@ -65,25 +64,25 @@ object Customer extends Logging {
     futureResult
   }
 
-  def readCustomer(custID: Int)(implicit client:FaunaClient): Future[Customer] = {
+  def readCustomer(custID: Int)(implicit client:FaunaClient, ec: ExecutionContext): Future[Value] = {
 
-    logger.info(s"starting read customer")
+    logger.info(s"starting read customer $custID")
 
     /*
      * Read and return the customer
      */
     val futureResult = client.query(
       Select("data", Get(Match(Index(Customer.CUSTOMER_INDEX), custID)))
-    ).map(value => value.to[Customer].get)
+    )
 
-    futureResult.foreach { customer =>
+   /* futureResult.foreach { customer =>
       logger.info(s"Read \'customer\' ${custID}: \n$customer")
     }
-
+*/
     futureResult
   }
 
-  def updateCustomer(customer:Customer)(implicit client:FaunaClient): Future[Value] = {
+  def updateCustomer(customer:Customer)(implicit client:FaunaClient, ec: ExecutionContext): Future[Customer] = {
 
     logger.info(s"starting update customer")
 
@@ -96,7 +95,8 @@ object Customer extends Logging {
         Obj("data" -> Obj("data" -> customer)
         )
       )
-    )
+    ).map(value => value.to[Customer].get)
+
     futureResult.foreach { result =>
       logger.info(s"Update \'customer\' ${customer.custID}: \n${JsonUtil.toJson(result)}")
     }
@@ -104,7 +104,7 @@ object Customer extends Logging {
     futureResult
   }
 
-  def deleteCustomer(custID: Int)(implicit client:FaunaClient): Future[Value] = {
+  def deleteCustomer(custID: Int)(implicit client:FaunaClient, ec: ExecutionContext): Future[Value] = {
 
     logger.info(s"starting delete customer")
 
@@ -123,7 +123,7 @@ object Customer extends Logging {
     futureResult
   }
 
-  def apply(client: FaunaClient): Future[Unit] = {
+  def apply(client: FaunaClient)(implicit ec: ExecutionContext): Future[Unit] = {
     logger.info("starting customer create schema")
 
     /*
