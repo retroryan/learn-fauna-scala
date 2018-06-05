@@ -118,23 +118,26 @@ object Customer extends Logging {
   def createListCustomer(customerList: Seq[Customer])(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
 
     /*
-     * Converting seq to a splat doesn't work, i.e. -> Arr(customerList : _*)
+     * Create a list of customer (records) using the customer codec
      *
-     * Hard coding 3 customers in as a temp solution, clearly not correct.  change to splat?
+     * What is neat about this example is it passes the Scala list directly to the Fauna query.
+     * This is possible because the customer codec converts it into the correct list type
+     *
      */
-
-    assert(customerList.size >= 3)
-
-    val createCustomerExpr =
+    val futureResult = client.query(
       Foreach(
-        Arr(customerList(1), customerList(2), customerList(3)),
+        customerList,
         Lambda { customer =>
           Create(
             Class(CUSTOMER_CLASS),
             Obj("data" -> customer))
-        })
+        }))
 
-    genericLoggedQuery("Create List of Customers", createCustomerExpr)
+    futureResult.foreach { result =>
+      logger.info(s"Created ${customerList.size} customers: \n${JsonUtil.toJson(result)}")
+    }
+
+    futureResult
   }
 
   def readCustomer(custID: Int)(implicit client: FaunaClient, ec: ExecutionContext): Future[Customer] = {
