@@ -124,9 +124,12 @@ object Customer extends Logging {
     val conditionalCreateCustomer = If(
       Exists(customerObj),
       Get(customerObj),
-      CreateClass(Obj("name" -> CUSTOMER_CLASS))
+      createCustomer
     )
 
+    /*
+    * Create the Indexes within the database. We will use these to access record in later lessons
+    */
     val indexObj = Index(CUSTOMER_INDEX)
     val createCustomerIndex = CreateIndex(
       Obj(
@@ -137,18 +140,15 @@ object Customer extends Logging {
       )
     )
 
-    /*
-    * Create the Indexes within the database. We will use these to access record in later lessons
-    */
-    val createIndex = If(
+    val conditionalCreateIndex = If(
       Exists(indexObj),
       Get(indexObj),
       createCustomerIndex
     )
 
     for {
-      createClassResult <- client.query(createCustomer)
-      createIndexResult <- client.query(createIndex)
+      createClassResult <- client.query(conditionalCreateCustomer)
+      createIndexResult <- client.query(conditionalCreateIndex)
     } yield {
       logger.info(s"Created customer class :: \n${JsonUtil.toJson(createClassResult)}")
       logger.info(s"Created customer_by_id index :: \n${JsonUtil.toJson(createIndexResult)}")
