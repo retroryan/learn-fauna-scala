@@ -69,6 +69,9 @@ object Customer extends Logging {
     /*
      * Create a list of customer (records) using the customer codec
      *
+     * What is neat about this example is it passes the Scala list directly to the Fauna query.
+     * This is possible because the customer codec converts it into the correct list type
+     *
      */
     val futureResult = client.query(
       Foreach(
