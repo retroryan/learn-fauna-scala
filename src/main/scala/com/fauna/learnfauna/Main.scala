@@ -52,19 +52,24 @@ object Main extends Logging {
     logger.info("starting customer tests")
     implicit val faunaClient: FaunaClient = createFaunaClient
 
-    val cust1 = Customer(0,100)
+    val cust1 = Customer(1, 100)
+    val cust2 = Customer(2, 100)
+    val cust3 = Customer(3, 100)
+    val cust4 = Customer(4, 100)
+    val cust5 = Customer(5, 100)
 
     val work = for {
       //Initalize the Customer schema and wait for the creation to finish
       _ <- Customer(faunaClient)
       _ <- Customer.createCustomer(cust1)
-      cust2 <- Customer.readCustomer(cust1.custID)
+      retCust1 <- Customer.readCustomer(cust1.id)
       _ <- Customer.updateCustomer(cust1.copy(balance = 200))
-      cust3 <- Customer.readCustomer(cust1.custID)
-      _ <- Customer.deleteCustomer(0)
+      retCust2 <- Customer.readCustomer(cust1.id)
+      _ <- Customer.deleteCustomer(cust1.id)
+      _ <- Customer.createListCustomer(Seq(cust2, cust3, cust4, cust5))
     } yield {
-      logger.info(s"cust2: $cust2")
-      logger.info(s"cust3: $cust3")
+      logger.info(s"retCust1: $retCust1")
+      logger.info(s"retCust2: $retCust2")
     }
 
     //wait for the work to finish client

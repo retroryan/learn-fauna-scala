@@ -37,7 +37,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import faunadb.FaunaClient
 import faunadb.query._
 
-case class Customer(custID: Int, balance: Int)
+case class Customer(id: Int, balance: Int)
 
 object Customer extends Logging {
 
@@ -47,24 +47,52 @@ object Customer extends Logging {
 
   implicit val userCodec: Codec[Customer] = Codec.caseClass[Customer]
 
-  def createCustomer(customer:Customer)(implicit client:FaunaClient, ec: ExecutionContext): Future[Value] = {
+  def createCustomer(customer: Customer)(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
     /*
      * Create a customer (record) using the customer codec
      */
     val futureResult = client.query(
       Create(
-        Class(CUSTOMER_CLASS), Obj("data" -> Obj("data" -> customer))
+        Class(CUSTOMER_CLASS), Obj("data" -> customer)
       )
     )
 
     futureResult.foreach { result =>
-      logger.info(s"Create \'customer\' ${customer.custID}: \n${JsonUtil.toJson(result)}")
+      logger.info(s"Create \'customer\' ${customer.id}: \n${JsonUtil.toJson(result)}")
     }
 
     futureResult
   }
 
-  def readCustomer(custID: Int)(implicit client:FaunaClient, ec: ExecutionContext): Future[Value] = {
+  def createListCustomer(customerList:Seq[Customer])(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
+
+    /*
+     * Create a list of customer (records) using the customer codec
+     *
+     * Converting seq to a splat doesn't work, i.e. -> Arr(customerList : _*)
+     *
+     * Hard coding 3 customers in as a temp solution, clearly not correct.  change to splat?
+     */
+
+    assert(customerList.size >= 3)
+
+    val futureResult = client.query(
+      Foreach(
+        Arr(customerList(1),customerList(2),customerList(3)),
+        Lambda { customer =>
+          Create(
+            Class(CUSTOMER_CLASS),
+            Obj("data" -> customer))
+        }))
+
+    futureResult.foreach { result =>
+      logger.info(s"Created ${customerList.size} customers: \n${JsonUtil.toJson(result)}")
+    }
+
+    futureResult
+  }
+
+  def readCustomer(custID: Int)(implicit client: FaunaClient, ec: ExecutionContext): Future[Customer] = {
 
     logger.info(s"starting read customer $custID")
 
@@ -73,16 +101,16 @@ object Customer extends Logging {
      */
     val futureResult = client.query(
       Select("data", Get(Match(Index(Customer.CUSTOMER_INDEX), custID)))
-    )
+    ).map(value => value.to[Customer].get)
 
-   /* futureResult.foreach { customer =>
-      logger.info(s"Read \'customer\' ${custID}: \n$customer")
+    futureResult.foreach { customer =>
+      logger.info(s"Read \'customer\' $custID: \n$customer")
     }
-*/
+
     futureResult
   }
 
-  def updateCustomer(customer:Customer)(implicit client:FaunaClient, ec: ExecutionContext): Future[Customer] = {
+  def updateCustomer(customer: Customer)(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
 
     logger.info(s"starting update customer")
 
@@ -91,20 +119,19 @@ object Customer extends Logging {
      */
     val futureResult = client.query(
       Update(
-        Select("ref", Get(Match(Index(Customer.CUSTOMER_INDEX), customer.custID))),
-        Obj("data" -> Obj("data" -> customer)
-        )
+        Select("ref", Get(Match(Index(Customer.CUSTOMER_INDEX), customer.id))),
+        Obj("data" -> customer)
       )
-    ).map(value => value.to[Customer].get)
+    )
 
     futureResult.foreach { result =>
-      logger.info(s"Update \'customer\' ${customer.custID}: \n${JsonUtil.toJson(result)}")
+      logger.info(s"Update \'customer\' ${customer.id}: \n${JsonUtil.toJson(result)}")
     }
 
     futureResult
   }
 
-  def deleteCustomer(custID: Int)(implicit client:FaunaClient, ec: ExecutionContext): Future[Value] = {
+  def deleteCustomer(custID: Int)(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
 
     logger.info(s"starting delete customer")
 
@@ -117,7 +144,7 @@ object Customer extends Logging {
       )
     )
     futureResult.foreach { result =>
-      logger.info(s"Delete \'customer\' ${custID}: \n${JsonUtil.toJson(result)}")
+      logger.info(s"Delete \'customer\' $custID: \n${JsonUtil.toJson(result)}")
     }
 
     futureResult
@@ -138,7 +165,10 @@ object Customer extends Logging {
     )
 
     /*
-    * Create the Indexes within the database. We will use these to access record in later lessons
+    * Create the Indexes within the database. We will use these to access customer records by ID.
+    *
+    * IMPORTANT - the field name here must match the field name in the Customer class because it is automatically derived
+    * as part of the custom codex
     */
     val indexObj = Index(CUSTOMER_INDEX)
     val createCustomerIndex = CreateIndex(
