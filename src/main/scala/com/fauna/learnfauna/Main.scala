@@ -52,6 +52,32 @@ object Main extends Logging {
     logger.info("starting customer tests")
     implicit val faunaClient: FaunaClient = createFaunaClient
 
+    //val work: Future[Unit] = originalCustomerTests(faunaClient)
+
+    val work = for {
+      //Initalize the Customer schema and wait for the creation to finish
+      _ <- Customer(faunaClient)
+      _ <- Customer.create20Customers()
+      _ <- Customer.readGroupCustomers()
+      _ <- Customer.readCustomerByIds()
+    } yield {
+    }
+
+
+    //wait for the work to finish client
+    await(work)
+
+    logger.info("finished customer tests")
+
+    /*
+  * Just to keep things neat and tidy, close the client connection
+  */
+    faunaClient.close()
+    logger.info("Disconnected from FaunaDB!")
+    System.exit(0)
+  }
+
+  private def originalCustomerTests(faunaClient: FaunaClient)(implicit client: FaunaClient) = {
     val cust1 = Customer(1, 100)
     val cust2 = Customer(2, 100)
     val cust3 = Customer(3, 100)
@@ -71,18 +97,7 @@ object Main extends Logging {
       logger.info(s"retCust1: $retCust1")
       logger.info(s"retCust2: $retCust2")
     }
-
-    //wait for the work to finish client
-    await(work)
-
-    logger.info("finished customer tests")
-
-    /*
-  * Just to keep things neat and tidy, close the client connection
-  */
-    faunaClient.close()
-    logger.info("Disconnected from FaunaDB!")
-    System.exit(0)
+    work
   }
 
   def createFaunaClient: FaunaClient = {

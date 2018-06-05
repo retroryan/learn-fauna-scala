@@ -21,7 +21,7 @@ package com.fauna.learnfauna
  * They should best be thought of as convenience items for our demo apps.
  */
 
-import faunadb.values.{Codec, Value}
+import faunadb.values.{ArrayV, Codec, Value}
 import grizzled.slf4j.Logging
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -47,28 +47,77 @@ object Customer extends Logging {
 
   implicit val userCodec: Codec[Customer] = Codec.caseClass[Customer]
 
-  def createCustomer(customer: Customer)(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
-    /*
-     * Create a customer (record) using the customer codec
-     */
-    val futureResult = client.query(
-      Create(
-        Class(CUSTOMER_CLASS), Obj("data" -> customer)
-      )
-    )
+  //Lesson 5 Customer Operations
+  def create20Customers()(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
 
-    futureResult.foreach { result =>
-      logger.info(s"Create \'customer\' ${customer.id}: \n${JsonUtil.toJson(result)}")
+    val create20Expr = Map((1 to 20).toList,
+      Lambda { id =>
+        Create(
+          Class(Customer.CUSTOMER_CLASS),
+          Obj("data" -> Obj("id" -> id, "balance" -> Multiply(id, 10)))
+        )
+      }
+    )
+    genericLoggedQuery("Create 20 Customers", create20Expr)
+  }
+
+  def readGroupCustomers()(implicit client: FaunaClient, ec: ExecutionContext): Future[Seq[Customer]] = {
+
+    val futureResult = client.query(
+      Map(
+        Paginate(
+          Union(
+            Match(Index(Customer.CUSTOMER_INDEX), 1),
+            Match(Index(Customer.CUSTOMER_INDEX), 3),
+            Match(Index(Customer.CUSTOMER_INDEX), 8)
+          )
+        ),
+        Lambda { x => Select("data", Get(x)) }
+      )
+    ).map(value => value("data").to[Seq[Customer]].get)
+
+    futureResult.foreach { customer =>
+      logger.info(s"Read Group Customers -> $customer")
     }
 
     futureResult
   }
 
-  def createListCustomer(customerList:Seq[Customer])(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
+  def readCustomerByIds()(implicit client: FaunaClient, ec: ExecutionContext): Future[Seq[Customer]] = {
+
+    val range = List(1, 3, 6, 7)
+    val futureResult = client.query(
+      Map(
+        Paginate(
+          Union(
+            Map(range,
+              Lambda { y => Match(Index(Customer.CUSTOMER_INDEX), y) }
+            )
+          )
+        ),
+        Lambda { x => Select("data", Get(x)) }
+      )
+    ).map(value => value("data").to[Seq[Customer]].get)
+
+    futureResult.foreach { customer =>
+      logger.info(s"Read Customers by ID -> $customer")
+    }
+
+    futureResult
+  }
+
+  //Original Lesson Customer Operations
+  def createCustomer(customer: Customer)(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
+    val createCustomerExpr = Create(
+      Class(CUSTOMER_CLASS), Obj("data" -> customer)
+    )
+
+    genericLoggedQuery("Create Customer", createCustomerExpr)
+  }
+
+  def createListCustomer(customerList: Seq[Customer])(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
 
     /*
-     * Create a list of customer (records) using the customer codec
-     *
      * Converting seq to a splat doesn't work, i.e. -> Arr(customerList : _*)
      *
      * Hard coding 3 customers in as a temp solution, clearly not correct.  change to splat?
@@ -76,29 +125,20 @@ object Customer extends Logging {
 
     assert(customerList.size >= 3)
 
-    val futureResult = client.query(
+    val createCustomerExpr =
       Foreach(
-        Arr(customerList(1),customerList(2),customerList(3)),
+        Arr(customerList(1), customerList(2), customerList(3)),
         Lambda { customer =>
           Create(
             Class(CUSTOMER_CLASS),
             Obj("data" -> customer))
-        }))
+        })
 
-    futureResult.foreach { result =>
-      logger.info(s"Created ${customerList.size} customers: \n${JsonUtil.toJson(result)}")
-    }
-
-    futureResult
+    genericLoggedQuery("Create List of Customers", createCustomerExpr)
   }
 
   def readCustomer(custID: Int)(implicit client: FaunaClient, ec: ExecutionContext): Future[Customer] = {
 
-    logger.info(s"starting read customer $custID")
-
-    /*
-     * Read and return the customer
-     */
     val futureResult = client.query(
       Select("data", Get(Match(Index(Customer.CUSTOMER_INDEX), custID)))
     ).map(value => value.to[Customer].get)
@@ -112,39 +152,30 @@ object Customer extends Logging {
 
   def updateCustomer(customer: Customer)(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
 
-    logger.info(s"starting update customer")
-
-    /*
-     * Update the customer
-     */
-    val futureResult = client.query(
-      Update(
-        Select("ref", Get(Match(Index(Customer.CUSTOMER_INDEX), customer.id))),
-        Obj("data" -> customer)
-      )
+    val updateCustomerExp = Update(
+      Select("ref", Get(Match(Index(Customer.CUSTOMER_INDEX), customer.id))),
+      Obj("data" -> customer)
     )
 
-    futureResult.foreach { result =>
-      logger.info(s"Update \'customer\' ${customer.id}: \n${JsonUtil.toJson(result)}")
-    }
-
-    futureResult
+    genericLoggedQuery("Update the customer", updateCustomerExp)
   }
 
   def deleteCustomer(custID: Int)(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
 
-    logger.info(s"starting delete customer")
-
-    /*
-     * Delete the customer
-     */
-    val futureResult = client.query(
+    val deleteCustomerExp =
       Delete(
         Select("ref", Get(Match(Index(Customer.CUSTOMER_INDEX), custID)))
       )
-    )
+
+    genericLoggedQuery("Delete the customer", deleteCustomerExp)
+  }
+
+  def genericLoggedQuery(operation: String, expr: Expr)(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
+
+    val futureResult = client.query(expr)
+
     futureResult.foreach { result =>
-      logger.info(s"Delete \'customer\' $custID: \n${JsonUtil.toJson(result)}")
+      logger.info(s"$operation: \n${JsonUtil.toJson(result)}")
     }
 
     futureResult
