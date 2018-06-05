@@ -57,10 +57,11 @@ object Main extends Logging {
     val work = for {
       //Initalize the Customer schema and wait for the creation to finish
       _ <- Customer(faunaClient)
-      _ <- Customer.create20Customers()
-      _ <- Customer.readGroupCustomers()
-      _ <- Customer.readCustomerByIds()
+      custList <- Customer.create20Customers()
+      //_ <- Customer.readGroupCustomers()
+      //_ <- Customer.readCustomerByIds()
     } yield {
+      logger.info(s"Create 20 customer list: $custList")
     }
 
 

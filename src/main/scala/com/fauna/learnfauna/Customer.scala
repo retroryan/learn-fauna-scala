@@ -21,7 +21,7 @@ package com.fauna.learnfauna
  * They should best be thought of as convenience items for our demo apps.
  */
 
-import faunadb.values.{ArrayV, Codec, Value}
+import faunadb.values._
 import grizzled.slf4j.Logging
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -48,17 +48,31 @@ object Customer extends Logging {
   implicit val userCodec: Codec[Customer] = Codec.caseClass[Customer]
 
   //Lesson 5 Customer Operations
-  def create20Customers()(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
+  def create20Customers()(implicit client: FaunaClient, ec: ExecutionContext) = {
 
-    val create20Expr = Map((1 to 20).toList,
-      Lambda { id =>
-        Create(
-          Class(Customer.CUSTOMER_CLASS),
-          Obj("data" -> Obj("id" -> id, "balance" -> Multiply(id, 10)))
-        )
-      }
+    val futureResult = client.query(
+      Map((1 to 20).toList,
+        Lambda { id =>
+          Create(
+            Class(Customer.CUSTOMER_CLASS),
+            Obj("data" -> Obj("id" -> id, "balance" -> Multiply(id, 10)))
+          )
+        }
+      )
     )
-    genericLoggedQuery("Create 20 Customers", create20Expr)
+
+    //If needed you can get a list of reference id's from the query using:
+    val listOfRefIds = futureResult.map { customerList =>
+      val refVList = customerList.collect(Field("ref").to[RefV]).get
+      val listOfRefIds = refVList.map(ref => ref.id)
+      logger.info(s"listOfRefIds: $listOfRefIds")
+    }
+
+
+    //this maps the created customer list to a list of the actual Customer instances created
+    futureResult.map { customerList =>
+      customerList.collect(Field("data").to[Customer]).get
+    }
   }
 
   def readGroupCustomers()(implicit client: FaunaClient, ec: ExecutionContext): Future[Seq[Customer]] = {
