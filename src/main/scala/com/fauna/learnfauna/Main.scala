@@ -38,7 +38,7 @@ import scala.concurrent.duration._
 import faunadb.query._
 import faunadb.FaunaClient
 
-object Main extends App with Logging {
+object Main extends Logging {
 
   import ExecutionContext.Implicits._
 
@@ -47,29 +47,31 @@ object Main extends App with Logging {
    */
   val LEDGER_DB = "LedgerExample"
 
-  //This is the main functionality of lessong 2 - create a fauna client and run the customer tests
-  logger.info("starting customer tests")
-  val faunaClient = createFaunaClient
+  def main(args: Array[String]): Unit = {
+    //This is the main functionality of lesson 2 - create a fauna client and run the customer tests
+    logger.info("starting customer tests")
+    val faunaClient = createFaunaClient
 
-  val work = for {
-    customer <- Customer(faunaClient)
-    _ <- customer.createCustomer(0, 100)
-    _ <- customer.readCustomer(0)
-    _ <- customer.updateCustomer(0, 200)
-    _ <- customer.deleteCustomer(0)
-  } yield ()
+    val work = for {
+      customer <- Customer(faunaClient)
+      _ <- customer.createCustomer(0, 100)
+      _ <- customer.readCustomer(0)
+      _ <- customer.updateCustomer(0, 200)
+      _ <- customer.deleteCustomer(0)
+    } yield ()
 
-  //wait for the work to finish client
-  await(work)
+    //wait for the work to finish client
+    await(work)
 
-  logger.info("finished customer tests")
+    logger.info("finished customer tests")
 
-  /*
+    /*
   * Just to keep things neat and tidy, close the client connection
   */
-  faunaClient.close()
-  logger.info("Disconnected from FaunaDB!")
-  System.exit(0)
+    faunaClient.close()
+    logger.info("Disconnected from FaunaDB!")
+    System.exit(0)
+  }
 
   def createFaunaClient: FaunaClient = {
     logger.info("starting create fauna client")
