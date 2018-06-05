@@ -21,10 +21,10 @@ package com.fauna.learnfauna
  * They should best be thought of as convenience items for our demo apps.
  */
 
+import faunadb.values.Value
 import grizzled.slf4j.Logging
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 
 /*
  * These are the required imports for Fauna.
@@ -42,55 +42,69 @@ class Customer(val client: FaunaClient) extends Logging {
 
   import ExecutionContext.Implicits._
 
-  def createCustomer(custID: Int, balance: Int): Unit = {
+  def createCustomer(custID: Int, balance: Int): Future[Value] = {
     /*
      * Create a customer (record)
      */
-    val result = client.query(
+    val futureResult = client.query(
       Create(
         Class("customers"), Obj("data" -> Obj("id" -> custID, "balance" -> balance))
       )
     )
-    Await.result(result, Duration.Inf)
-    logger.info(s"Create \'customer\' ${custID}: \n${JsonUtil.toJson(result)}")
+
+    futureResult.foreach { result =>
+      logger.info(s"Create \'customer\' ${custID}: \n${JsonUtil.toJson(result)}")
+    }
+
+    futureResult
   }
 
-  def readCustomer(custID: Int): Unit = {
+  def readCustomer(custID: Int): Future[Value] = {
     /*
      * Read the customer we just created
      */
-    val result = client.query(
-      Select("data", Get(Match(Index("customer_by_id"), custID)))
+    val futureResult = client.query(
+      Select("data", Get(Match(Index(Customer.CUSTOMER_INDEX), custID)))
     )
-    Await.result(result, Duration.Inf)
-    logger.info(s"Read \'customer\' ${custID}: \n${JsonUtil.toJson(result)}")
+    futureResult.foreach { result =>
+      logger.info(s"Read \'customer\' ${custID}: \n${JsonUtil.toJson(result)}")
+    }
+
+    futureResult
   }
 
-  def updateCustomer(custID: Int, newBalance: Int): Unit = {
+  def updateCustomer(custID: Int, newBalance: Int): Future[Value] = {
     /*
      * Update the customer
      */
-    val result = client.query(
+    val futureResult = client.query(
       Update(
-        Select("ref", Get(Match(Index("customer_by_id"), custID))),
+        Select("ref", Get(Match(Index(Customer.CUSTOMER_INDEX), custID))),
         Obj("data" -> Obj("balance" -> newBalance)
         )
       )
     )
-    Await.result(result, Duration.Inf)
-    logger.info(s"Update \'customer\' ${custID}: \n${JsonUtil.toJson(result)}")
+    futureResult.foreach { result =>
+      logger.info(s"Update \'customer\' ${custID}: \n${JsonUtil.toJson(result)}")
+    }
+
+    futureResult
   }
 
-  def deleteCustomer(custID: Int): Unit = {
+  def deleteCustomer(custID: Int): Future[Value] = {
     /*
      * Delete the customer
      */
-    val result = client.query(
+    val futureResult = client.query(
       Delete(
-        Select("ref", Get(Match(Index("customer_by_id"), custID)))
+        Select("ref", Get(Match(Index(Customer.CUSTOMER_INDEX), custID)))
       )
     )
-    logger.info(s"Delete \'customer\' ${custID}: \n${JsonUtil.toJson(result)}")
+    futureResult.foreach { result =>
+      logger.info(s"Delete \'customer\' ${custID}: \n${JsonUtil.toJson(result)}")
+    }
+
+    futureResult
   }
 }
 

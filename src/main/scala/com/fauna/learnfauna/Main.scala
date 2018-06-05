@@ -51,34 +51,24 @@ object Main extends App with Logging {
   logger.info("starting customer tests")
   val faunaClient = createFaunaClient
 
-  val customer = Customer(faunaClient)
+  val work = for {
+    customer <- Customer(faunaClient)
+    _ <- customer.createCustomer(0, 100)
+    _ <- customer.readCustomer(0)
+    _ <- customer.updateCustomer(0, 200)
+    _ <- customer.deleteCustomer(0)
+  } yield ()
 
-
-  /*faunaClient.foreach { faunaClient =>
-
-    val customer = new Customer(faunaClient)
-    customer.createSchema()
-    customer.createCustomer(0, 100)
-    customer.readCustomer(0)
-    customer.updateCustomer(0, 200)
-    customer.readCustomer(0)
-    customer.deleteCustomer(0)
-**/
-
-  /*
- * Just to keep things neat and tidy, close the client connection
- */
-  //  faunaClient.close()
-
-  //  logger.info("Disconnected from FaunaDB!")
-
-  // add this at the end of execution to make things shut down nicely
-
-  //wait for the fauna client
-  await(customer)
+  //wait for the work to finish client
+  await(work)
 
   logger.info("finished customer tests")
 
+  /*
+  * Just to keep things neat and tidy, close the client connection
+  */
+  faunaClient.close()
+  logger.info("Disconnected from FaunaDB!")
   System.exit(0)
 
   def createFaunaClient: FaunaClient = {
