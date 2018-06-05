@@ -50,15 +50,22 @@ object Main extends Logging {
   def main(args: Array[String]): Unit = {
     //This is the main functionality of lesson 2 - create a fauna client and run the customer tests
     logger.info("starting customer tests")
-    val faunaClient = createFaunaClient
+    implicit val faunaClient: FaunaClient = createFaunaClient
+
+    val cust1 = Customer(0,100)
 
     val work = for {
-      customer <- Customer(faunaClient)
-      _ <- customer.createCustomer(0, 100)
-      _ <- customer.readCustomer(0)
-      _ <- customer.updateCustomer(0, 200)
-      _ <- customer.deleteCustomer(0)
-    } yield ()
+      //Initalize the Customer schema and wait for the creation to finish
+      _ <- Customer(faunaClient)
+      _ <- Customer.createCustomer(cust1)
+      cust2 <- Customer.readCustomer(cust1.custID)
+      _ <- Customer.updateCustomer(cust1.copy(balance = 200))
+      cust3 <- Customer.readCustomer(cust1.custID)
+      _ <- Customer.deleteCustomer(0)
+    } yield {
+      logger.info(s"cust2: $cust2")
+      logger.info(s"cust3: $cust3")
+    }
 
     //wait for the work to finish client
     await(work)

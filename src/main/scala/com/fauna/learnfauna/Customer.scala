@@ -21,7 +21,7 @@ package com.fauna.learnfauna
  * They should best be thought of as convenience items for our demo apps.
  */
 
-import faunadb.values.Value
+import faunadb.values.{Codec, Value}
 import grizzled.slf4j.Logging
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -37,61 +37,77 @@ import scala.concurrent.{ExecutionContext, Future}
 import faunadb.FaunaClient
 import faunadb.query._
 
+case class Customer(custID: Int, balance: Int)
 
-class Customer(val client: FaunaClient) extends Logging {
+object Customer extends Logging {
 
   import ExecutionContext.Implicits._
 
-  def createCustomer(custID: Int, balance: Int): Future[Value] = {
+  val CUSTOMER_CLASS = "customers"
+  val CUSTOMER_INDEX = s"$CUSTOMER_CLASS-by-name"
+
+  implicit val userCodec: Codec[Customer] = Codec.caseClass[Customer]
+
+  def createCustomer(customer:Customer)(implicit client:FaunaClient): Future[Value] = {
     /*
-     * Create a customer (record)
+     * Create a customer (record) using the customer codec
      */
     val futureResult = client.query(
       Create(
-        Class("customers"), Obj("data" -> Obj("id" -> custID, "balance" -> balance))
+        Class(CUSTOMER_CLASS), Obj("data" -> Obj("data" -> customer))
       )
     )
 
     futureResult.foreach { result =>
-      logger.info(s"Create \'customer\' ${custID}: \n${JsonUtil.toJson(result)}")
+      logger.info(s"Create \'customer\' ${customer.custID}: \n${JsonUtil.toJson(result)}")
     }
 
     futureResult
   }
 
-  def readCustomer(custID: Int): Future[Value] = {
+  def readCustomer(custID: Int)(implicit client:FaunaClient): Future[Customer] = {
+
+    logger.info(s"starting read customer")
+
     /*
-     * Read the customer we just created
+     * Read and return the customer
      */
     val futureResult = client.query(
       Select("data", Get(Match(Index(Customer.CUSTOMER_INDEX), custID)))
-    )
-    futureResult.foreach { result =>
-      logger.info(s"Read \'customer\' ${custID}: \n${JsonUtil.toJson(result)}")
+    ).map(value => value.to[Customer].get)
+
+    futureResult.foreach { customer =>
+      logger.info(s"Read \'customer\' ${custID}: \n$customer")
     }
 
     futureResult
   }
 
-  def updateCustomer(custID: Int, newBalance: Int): Future[Value] = {
+  def updateCustomer(customer:Customer)(implicit client:FaunaClient): Future[Value] = {
+
+    logger.info(s"starting update customer")
+
     /*
      * Update the customer
      */
     val futureResult = client.query(
       Update(
-        Select("ref", Get(Match(Index(Customer.CUSTOMER_INDEX), custID))),
-        Obj("data" -> Obj("balance" -> newBalance)
+        Select("ref", Get(Match(Index(Customer.CUSTOMER_INDEX), customer.custID))),
+        Obj("data" -> Obj("data" -> customer)
         )
       )
     )
     futureResult.foreach { result =>
-      logger.info(s"Update \'customer\' ${custID}: \n${JsonUtil.toJson(result)}")
+      logger.info(s"Update \'customer\' ${customer.custID}: \n${JsonUtil.toJson(result)}")
     }
 
     futureResult
   }
 
-  def deleteCustomer(custID: Int): Future[Value] = {
+  def deleteCustomer(custID: Int)(implicit client:FaunaClient): Future[Value] = {
+
+    logger.info(s"starting delete customer")
+
     /*
      * Delete the customer
      */
@@ -106,14 +122,8 @@ class Customer(val client: FaunaClient) extends Logging {
 
     futureResult
   }
-}
 
-object Customer extends Logging {
-
-  val CUSTOMER_CLASS = "customers"
-  val CUSTOMER_INDEX = s"$CUSTOMER_CLASS-by-name"
-
-  def apply(client: FaunaClient)(implicit ec: ExecutionContext): Future[Customer] = {
+  def apply(client: FaunaClient): Future[Unit] = {
     logger.info("starting customer create schema")
 
     /*
@@ -124,9 +134,12 @@ object Customer extends Logging {
     val conditionalCreateCustomer = If(
       Exists(customerObj),
       Get(customerObj),
-      CreateClass(Obj("name" -> CUSTOMER_CLASS))
+      createCustomer
     )
 
+    /*
+    * Create the Indexes within the database. We will use these to access record in later lessons
+    */
     val indexObj = Index(CUSTOMER_INDEX)
     val createCustomerIndex = CreateIndex(
       Obj(
@@ -137,22 +150,18 @@ object Customer extends Logging {
       )
     )
 
-    /*
-    * Create the Indexes within the database. We will use these to access record in later lessons
-    */
-    val createIndex = If(
+    val conditionalCreateIndex = If(
       Exists(indexObj),
       Get(indexObj),
       createCustomerIndex
     )
 
     for {
-      createClassResult <- client.query(createCustomer)
-      createIndexResult <- client.query(createIndex)
+      createClassResult <- client.query(conditionalCreateCustomer)
+      createIndexResult <- client.query(conditionalCreateIndex)
     } yield {
       logger.info(s"Created customer class :: \n${JsonUtil.toJson(createClassResult)}")
       logger.info(s"Created customer_by_id index :: \n${JsonUtil.toJson(createIndexResult)}")
-      new Customer(client)
     }
   }
 }
