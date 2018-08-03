@@ -54,21 +54,26 @@ object Main extends Logging {
 
     //val work: Future[Unit] = originalCustomerTests(faunaClient)
 
-    val work = for {
-      //Initalize the Customer schema and wait for the creation to finish
-      _ <- Customer(faunaClient)
-      custList <- Customer.create20Customers()
-      //_ <- Customer.readGroupCustomers()
-      //_ <- Customer.readCustomerByIds()
-    } yield {
-      logger.info(s"Create 20 customer list: $custList")
-    }
+    //orgCustomerWork(faunaClient)
 
+    val work = for {
+      _ <- AltCustomer.createSchema(faunaClient)
+      _ <- AltCustomer.createCustomer(AltCustomer(20,24.32))
+    } yield {
+      logger.info(s"created alt customer schema")
+    }
 
     //wait for the work to finish client
     await(work)
 
-    logger.info("finished customer tests")
+    try {
+      AltCustomer.readCustomer(20)
+    }
+    catch {
+      case exc => println(s"ERROR $exc")
+    }
+
+    logger.info("finished alt customer tests")
 
     /*
   * Just to keep things neat and tidy, close the client connection
@@ -76,6 +81,18 @@ object Main extends Logging {
     faunaClient.close()
     logger.info("Disconnected from FaunaDB!")
     System.exit(0)
+  }
+
+  private def orgCustomerWork(faunaClient: FaunaClient)(implicit client:FaunaClient) = {
+    val work = for {
+      //Initalize the Customer schema and wait for the creation to finish
+      _ <- Customer(faunaClient)
+      custList <- Customer.create20Customers()
+      _ <- Customer.readGroupCustomers()
+      _ <- Customer.readCustomerByIds()
+    } yield {
+      logger.info(s"Create 20 customer list: $custList")
+    }
   }
 
   private def originalCustomerTests(faunaClient: FaunaClient)(implicit client: FaunaClient) = {
@@ -107,7 +124,10 @@ object Main extends Logging {
     val faunaDBConfig = FaunaDBConfig.getFaunaDBConfig
 
     //Create an admin client. This is the client we will use to create the database
-    val adminClient = FaunaClient(faunaDBConfig.secret, faunaDBConfig.endPoint)
+    //val adminClient = FaunaClient(faunaDBConfig.secret, faunaDBConfig.endPoint)
+    //default to the cloud db
+    val adminClient = FaunaClient(faunaDBConfig.secret)
+
     logger.info("Succesfully connected to FaunaDB as Admin!")
 
     val databaseRequest = createFaunaDatabase(faunaDBConfig, adminClient)
@@ -128,7 +148,7 @@ object Main extends Logging {
       }
     val serverKey = await(keyReq)
     adminClient.close
-    FaunaClient(serverKey, faunaDBConfig.endPoint)
+    FaunaClient(serverKey)
   }
 
   /*
@@ -141,7 +161,7 @@ object Main extends Logging {
     if (faunaDBConfig.deleteDB) {
       logger.info(s"deleting existing database")
       adminClient.query(
-        Arr(
+        Do(
           If(
             Exists(Database(LEDGER_DB)),
             Delete(Database(LEDGER_DB)),
@@ -162,6 +182,5 @@ object Main extends Logging {
     }
   }
 
-  def await[T](f: Future[T]): T = Await.result(f, 5.second)
 }
 

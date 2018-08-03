@@ -45,6 +45,8 @@ object Customer extends Logging {
   val CUSTOMER_CLASS = "customers"
   val CUSTOMER_INDEX = s"$CUSTOMER_CLASS-by-name"
 
+  //val CUSTOMER_INDEX_BY_ID = "customer_by_id"
+
   implicit val userCodec: Codec[Customer] = Codec.caseClass[Customer]
 
   //Lesson 5 Customer Operations
@@ -77,6 +79,8 @@ object Customer extends Logging {
 
   def readGroupCustomers()(implicit client: FaunaClient, ec: ExecutionContext): Future[Seq[Customer]] = {
 
+    println(s"readCustomerByIds")
+
     val futureResult = client.query(
       Map(
         Paginate(
@@ -98,6 +102,8 @@ object Customer extends Logging {
   }
 
   def readCustomerByIds()(implicit client: FaunaClient, ec: ExecutionContext): Future[Seq[Customer]] = {
+
+    println(s"readCustomerByIds")
 
     val range = List(1, 3, 6, 7)
     val futureResult = client.query(
@@ -187,16 +193,7 @@ object Customer extends Logging {
     genericLoggedQuery("Delete the customer", deleteCustomerExp)
   }
 
-  def genericLoggedQuery(operation: String, expr: Expr)(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
 
-    val futureResult = client.query(expr)
-
-    futureResult.foreach { result =>
-      logger.info(s"$operation: \n${JsonUtil.toJson(result)}")
-    }
-
-    futureResult
-  }
 
   def apply(client: FaunaClient)(implicit ec: ExecutionContext): Future[Unit] = {
     logger.info("starting customer create schema")
