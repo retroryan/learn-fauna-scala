@@ -31,7 +31,7 @@ object SpellExample  {
      *  - remove the 'endpoint' argument below
      *  - substitute "secret" for your authentication key's secret
      */
-    val adminClient = FaunaClient("fnAC1R-DWpACB7raaCMPn8j2g7n4Q-0UPnIDWPft")
+    val adminClient = FaunaClient("fnAC1R-0UPnIDWPft")
 
     /*
     * Name of the test database

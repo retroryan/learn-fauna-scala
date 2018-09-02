@@ -4,12 +4,15 @@ version := "0.1"
 
 scalaVersion := "2.12.4"
 
+//val faunaVersion = "2.5.3"
+val faunaVersion = "2.6.0-SNAPSHOT"
+
 
 lazy val root = project.in(file("."))
   .settings(common)
   .settings(
     libraryDependencies ++= Seq(
-    "com.faunadb" % "faunadb-scala_2.12" % "2.2.0",
+    "com.faunadb" % "faunadb-scala_2.12" % faunaVersion,
     "com.typesafe.akka" %% "akka-actor" % "2.5.3",
     "com.typesafe" % "config" % "1.3.1",
     "io.spray" %%  "spray-json" % "1.3.3",

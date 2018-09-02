@@ -51,3 +51,18 @@ Deeper dive into query patterns using indexes. Specifically we add a new index t
 In branch **lesson4**
 
 This lessons presents a couple of new more advanced interactions. The first is a general approach to creating a larger set of instances by passing logic down to the DB. Also developed is an example of accessing individual members returned from a query. Finally we introduce a simple version of a complex transaction that demonstrates a double entry ledger style transaction. This example introduces a number of new Fauna Query Language commands.
+
+Map(
+    Paginate(Match(Index("customer-byid"), 1)),
+            Lambda("customer",
+                Get(Var("customer"))
+            )
+)
+
+
+Map(
+    Paginate(Match(Index("all_customerss"))),
+            Lambda("customer",
+                Get(Var("customer"))
+            )
+)

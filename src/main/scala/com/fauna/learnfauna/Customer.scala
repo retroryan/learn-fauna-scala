@@ -21,6 +21,7 @@ package com.fauna.learnfauna
  * They should best be thought of as convenience items for our demo apps.
  */
 
+import com.fauna.learnfauna.FaunaUtils.TermField
 import faunadb.values._
 import grizzled.slf4j.Logging
 
@@ -37,23 +38,38 @@ import scala.concurrent.{ExecutionContext, Future}
 import faunadb.FaunaClient
 import faunadb.query._
 
-case class Customer(id: Int, balance: Int)
+trait Address
+
+case class HomeAddress(city: String, state: String, dog:String) extends Address
+
+case class WorkAddress(city: String, state: String) extends Address
+
+case object EmptyAddress extends Address
+
+object Address {
+
+  implicit val addressTrait = Codec.Union[Address]("address")(
+    "home" -> Codec.Record[HomeAddress],
+    "work" -> Codec.Record[WorkAddress],
+    "empty" -> Codec.Record(EmptyAddress))
+
+}
+
+case class Customer(id: Int, balance: Int, address: Address)
 
 object Customer extends Logging {
 
 
   val CUSTOMER_CLASS = "customers"
-  val CUSTOMER_INDEX = s"$CUSTOMER_CLASS-by-name"
+  val CUSTOMER_INDEX = s"customer-byid"
 
-  //val CUSTOMER_INDEX_BY_ID = "customer_by_id"
-
-  implicit val userCodec: Codec[Customer] = Codec.caseClass[Customer]
+  implicit val userCodec: Codec[Customer] = Codec.Record[Customer]
 
   //Lesson 5 Customer Operations
   def create20Customers()(implicit client: FaunaClient, ec: ExecutionContext) = {
 
     val futureResult = client.query(
-      Map((1 to 20).toList,
+      Map((100 to 120).toList,
         Lambda { id =>
           Create(
             Class(Customer.CUSTOMER_CLASS),
@@ -86,8 +102,8 @@ object Customer extends Logging {
         Paginate(
           Union(
             Match(Index(Customer.CUSTOMER_INDEX), 1),
-            Match(Index(Customer.CUSTOMER_INDEX), 3),
-            Match(Index(Customer.CUSTOMER_INDEX), 8)
+            Match(Index(Customer.CUSTOMER_INDEX), 2),
+            Match(Index(Customer.CUSTOMER_INDEX), 3)
           )
         ),
         Lambda { x => Select("data", Get(x)) }
@@ -162,6 +178,8 @@ object Customer extends Logging {
 
   def readCustomer(custID: Int)(implicit client: FaunaClient, ec: ExecutionContext): Future[Customer] = {
 
+    println(s"Reading Customer: $custID")
+
     val futureResult = client.query(
       Select("data", Get(Match(Index(Customer.CUSTOMER_INDEX), custID)))
     ).map(value => value.to[Customer].get)
@@ -194,46 +212,15 @@ object Customer extends Logging {
   }
 
 
-
-  def apply(client: FaunaClient)(implicit ec: ExecutionContext): Future[Unit] = {
+  def createSchema(implicit client: FaunaClient, ec: ExecutionContext): Future[Unit] = {
     logger.info("starting customer create schema")
 
-    /*
-     * Create an class to hold customers
-     */
-    val customerObj = Class(CUSTOMER_CLASS)
-    val createCustomer = CreateClass(Obj("name" -> CUSTOMER_CLASS))
-    val conditionalCreateCustomer = If(
-      Exists(customerObj),
-      Get(customerObj),
-      createCustomer
-    )
-
-    /*
-    * Create the Indexes within the database. We will use these to access customer records by ID.
-    *
-    * IMPORTANT - the field name here must match the field name in the Customer class because it is automatically derived
-    * as part of the custom codex
-    */
-    val indexObj = Index(CUSTOMER_INDEX)
-    val createCustomerIndex = CreateIndex(
-      Obj(
-        "name" -> CUSTOMER_INDEX,
-        "source" -> Class(CUSTOMER_CLASS),
-        "unique" -> true,
-        "terms" -> Arr(Obj("field" -> Arr("data", "id")))
-      )
-    )
-
-    val conditionalCreateIndex = If(
-      Exists(indexObj),
-      Get(indexObj),
-      createCustomerIndex
-    )
+    val termFields = Seq(TermField("id"))
 
     for {
-      createClassResult <- client.query(conditionalCreateCustomer)
-      createIndexResult <- client.query(conditionalCreateIndex)
+      createClassResult <- FaunaUtils.createClass(CUSTOMER_CLASS)
+      createIndexResult <- FaunaUtils.createIndex(CUSTOMER_INDEX, CUSTOMER_CLASS, termFields, Seq())
+      createIndexResult <- FaunaUtils.createClassIndex(CUSTOMER_CLASS)
     } yield {
       logger.info(s"Created customer class :: \n${JsonUtil.toJson(createClassResult)}")
       logger.info(s"Created customer_by_id index :: \n${JsonUtil.toJson(createIndexResult)}")
