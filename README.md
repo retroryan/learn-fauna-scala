@@ -61,7 +61,7 @@ Map(
 
 
 Map(
-    Paginate(Match(Index("all_customers"))),
+    Paginate(Match(Index("all_customerss"))),
             Lambda("customer",
                 Get(Var("customer"))
             )
