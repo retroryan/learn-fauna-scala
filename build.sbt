@@ -11,8 +11,20 @@ val faunaVersion = "2.6.0-SNAPSHOT"
 lazy val root = project.in(file("."))
   .settings(common)
   .settings(
+    javaOptions in run += "-XX:-OmitStackTraceInFastThrow",
     libraryDependencies ++= Seq(
-    "com.faunadb" % "faunadb-scala_2.12" % faunaVersion,
+
+      //This uses an early release of the fauna jvm driver - 2.6.0-SNAPSHOT
+      //drop a version of that jar file into a lib directory on the project root.
+      //"com.faunadb" % "faunadb-scala_2.12" % faunaVersion,
+
+      //jackson fasterxml is a transitive dependency of faunadb, so these are only
+    "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.9.6",
+    "com.fasterxml.jackson.core" % "jackson-core" % "2.9.6",
+    "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.6",
+    "com.codahale.metrics" % "metrics-core" % "3.0.2",
+      "org.asynchttpclient" % "async-http-client" % "2.5.3",
+
     "com.typesafe.akka" %% "akka-actor" % "2.5.3",
     "com.typesafe" % "config" % "1.3.1",
     "io.spray" %%  "spray-json" % "1.3.3",
