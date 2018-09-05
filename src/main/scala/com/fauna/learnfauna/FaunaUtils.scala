@@ -178,7 +178,7 @@ object FaunaUtils extends Logging {
     * @return
     */
   def createClassIndex(className: String)(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
-    val indexName = s"all_${className}"
+    val indexName = s"all_${className}s"
 
     val indexObj = Index(indexName)
 
