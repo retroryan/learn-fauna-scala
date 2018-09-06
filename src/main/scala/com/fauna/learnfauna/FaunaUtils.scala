@@ -131,7 +131,7 @@ object FaunaUtils extends Logging {
       case refField: RefField => Obj("field" -> Arr("ref"))
     }
 
-    var valuesArr = values.collect {
+    val valuesArr = values.collect {
       case value: ValueField => Obj("field" -> Arr("data", value.name), "reverse" -> value.reverse)
       case nestedValue: NestedValueField => Obj("field" -> Arr("data", nestedValue.n1, nestedValue.n2), "reverse" -> nestedValue.reverse)
       case refField: RefField => Obj("field" -> Arr("ref"))
