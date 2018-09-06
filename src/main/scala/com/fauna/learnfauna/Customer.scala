@@ -49,17 +49,10 @@ case object EmptyAddress extends Address
 
 object Address {
 
-
-
-  def CaseObjectCodec[T](obj: T) = new Codec[T] {
-    def encode(t: T) = ObjectV.empty
-    def decode(v: Value,  path: FieldPath) = Result.successful(obj, path)
-  }
-
   implicit val addressTrait = Codec.Union[Address]("address")(
     "home" -> Codec.Record[HomeAddress],
     "work" -> Codec.Record[WorkAddress],
-    "empty" -> CaseObjectCodec(EmptyAddress))
+    "empty" -> Codec.Record(EmptyAddress))
 
 }
 
