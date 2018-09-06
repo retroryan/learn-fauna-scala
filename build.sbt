@@ -6,7 +6,6 @@ scalaVersion := "2.12.4"
 
 val faunaVersion = "2.5.4"
 
-
 lazy val root = project.in(file("."))
   .settings(common)
   .settings(

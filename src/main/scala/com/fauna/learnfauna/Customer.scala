@@ -37,6 +37,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 import faunadb.FaunaClient
 import faunadb.query._
+import faunadb.values. { FieldPath, ObjectV, Result, Value }
 
 trait Address
 
@@ -48,10 +49,17 @@ case object EmptyAddress extends Address
 
 object Address {
 
+
+
+  def CaseObjectCodec[T](obj: T) = new Codec[T] {
+    def encode(t: T) = ObjectV.empty
+    def decode(v: Value,  path: FieldPath) = Result.successful(obj, path)
+  }
+
   implicit val addressTrait = Codec.Union[Address]("address")(
     "home" -> Codec.Record[HomeAddress],
     "work" -> Codec.Record[WorkAddress],
-    "empty" -> Codec.Record(EmptyAddress))
+    "empty" -> CaseObjectCodec(EmptyAddress))
 
 }
 
