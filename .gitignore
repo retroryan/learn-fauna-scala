@@ -5,3 +5,4 @@ target-protobuf/
 .idea/
 *secret
 *secrets
+.DS_Store
