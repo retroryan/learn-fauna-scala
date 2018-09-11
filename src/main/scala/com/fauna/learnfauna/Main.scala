@@ -17,7 +17,6 @@
 package com.fauna.learnfauna
 
 
-import com.fauna.learnfauna.NewAddress.Asset
 import grizzled.slf4j.Logging
 
 import scala.concurrent.ExecutionContext
@@ -58,28 +57,40 @@ object Main extends Logging {
 
   private def originalCustomerTests(implicit client: FaunaClient) = {
 
-    val cust1 = Customer(1, 100, Asset)
-    val cust2 = Customer(2, 100, Asset)
-    val cust3 = Customer(3, 100, Asset)
-    val cust4 = Customer(4, 100, Asset)
-    val cust5 = Customer(5, 100, Asset)
+    val cust1 = Customer(1, 100, OldWorkAddress("pc", "ut"), HomeAddress("pc", "ut", "spot"))
+    val cust2 = Customer(2, 100, WorkAddress("ny", "ny"), HomeAddress("sf", "ca", "fido"))
+    val cust3 = Customer(3, 100, HomeAddress("sf", "ca", "fido"), WorkAddress("ny", "ny"))
+    val cust4 = Customer(4, 100, EmptyAddress, WorkAddress("sd", "ca"))
+    val cust5 = Customer(5, 100, OldWorkAddress("pc", "ut"), EmptyAddress)
+
 
     val writeWork = for {
       //Initialize the Customer schema and wait for the creation to finish
       _ <- Customer.createSchema
-      _ <- Customer.createCustomer(cust1)
-      _ <- Customer.updateCustomer(cust1.copy(balance = 200))
-      _ <- Customer.createListCustomer(Seq(cust2, cust3, cust4, cust5))
-      //custList <- Customer.create20Customers()
-      retCust1 <- Customer.readCustomer(1)
-      retCust2 <- Customer.readGroupCustomers
+
+//      _ <- Customer.createCustomer(cust1)
+      _ <- Customer.createCustomer(cust2)
+//      _ <- Customer.createCustomer(cust3)
+//      _ <- Customer.createCustomer(cust4)
+//      _ <- Customer.createCustomer(cust5)
+
+
+//      retCust1 <- Customer.readCustomer(1)
+      retCust2 <- Customer.readCustomer(2)
+//      retCust3 <- Customer.readCustomer(3)
+//      retCust4 <- Customer.readCustomer(4)
+//      retCust5 <- Customer.readCustomer(5)
+
 
     } yield {
-      logger.info(s"Create lots of customers")
 
-      logger.info(s"retCust1: $retCust1")
+//      logger.info(s"retCust1: $retCust1")
       logger.info(s"retCust2: $retCust2")
-      //logger.info(s"Create 20 customer list: $custList")
+//      logger.info(s"retCust3: $retCust3")
+//      logger.info(s"retCust4: $retCust4")
+//      logger.info(s"retCust5: $retCust5")
+
+
     }
 
     writeWork

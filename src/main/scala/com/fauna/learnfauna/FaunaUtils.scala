@@ -35,7 +35,7 @@ object FaunaUtils extends Logging {
     //only block on startup when we create the database
     val createDBResponse = await(databaseRequest)
 
-    logger.info(s"Created database: $faunaDBConfig.dbName :: \n${JsonUtil.toJson(createDBResponse)}")
+    logger.info(s"Created database: ${faunaDBConfig.dbName}")
 
     /*
     * Create a key specific to the database we just created. We will use this to
