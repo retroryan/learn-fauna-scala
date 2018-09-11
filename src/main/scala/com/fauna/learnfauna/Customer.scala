@@ -30,12 +30,12 @@ case class WorkAddress(city: String, state: String) extends NewAddress with Addr
 
 case object EmptyAddress extends NewAddress with Address
 
-case object Asset extends NewAddress
-
 object Address {
 
   implicit val addressTrait = Codec.Union[Address]("address")(
-    "oldWorkAddress" -> Codec.Record[OldWorkAddress]
+    "oldWorkAddress" -> Codec.Record[OldWorkAddress],
+    "work" -> Codec.Record[WorkAddress],
+    "empty" -> Codec.Record(EmptyAddress),
   )
 }
 
@@ -45,8 +45,9 @@ object NewAddress {
     "home" -> Codec.Record[HomeAddress],
     "work" -> Codec.Record[WorkAddress],
     "empty" -> Codec.Record(EmptyAddress),
-    "asset" -> Codec.Record(Asset)
   )
+
+
 }
 
 // deeply nested traits
@@ -55,11 +56,11 @@ object NewAddress {
 // codec on a type class
 
 
-case class Customer(id: Int, balance: Int, address: Address, newAddress: NewAddress)
+case class OldCustomer(id: Int, balance: Int, address: Address, newAddress: NewAddress)
 
 case class ProtoCustomer(id: Int, balance: Int, address: Address, newAddress: NewAddress)
 
-case class NewCustomer[+T <: Region](id: Int, balance: Int, address: Address, newAddress: T)
+case class Customer[+T <: Region](id: Int, balance: Int,  newAddress: T)
 
 object Customer extends Logging {
 
@@ -67,10 +68,11 @@ object Customer extends Logging {
   val CUSTOMER_CLASS = "customers"
   val CUSTOMER_INDEX = s"customer-byid"
 
-  implicit val userCodec: Codec[Customer] = Codec.Record[Customer]
+  implicit val newAddressUserCodec: Codec[Customer[HomeAddress]] = Codec.Record[Customer[HomeAddress]]
+  implicit val addressUserCodec: Codec[Customer[Address]] = Codec.Record[Customer[Address]]
 
   //Original Lesson Customer Operations
-  def createCustomer(customer: Customer)(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
+  def createCustomer(customer: Customer[HomeAddress])(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
     val createCustomerExpr = Create(
       Class(CUSTOMER_CLASS), Obj("data" -> customer)
     )
@@ -79,13 +81,13 @@ object Customer extends Logging {
   }
 
 
-  def readCustomer(custID: Int)(implicit client: FaunaClient, ec: ExecutionContext): Future[Customer] = {
+  def readCustomer(custID: Int)(implicit client: FaunaClient, ec: ExecutionContext): Future[Customer[Address]] = {
 
     println(s"Reading Customer: $custID")
 
     val futureResult = client.query(
       Select("data", Get(Match(Index(Customer.CUSTOMER_INDEX), custID)))
-    ).map(value => value.to[Customer].get)
+    ).map(value => value.to[Customer[Address]].get)
 
     futureResult.foreach { customer =>
       logger.info(s"Read \'customer\' $custID: \n$customer")
