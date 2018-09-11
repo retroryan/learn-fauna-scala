@@ -22,6 +22,7 @@ package com.fauna.learnfauna
  */
 
 import com.fauna.learnfauna.FaunaUtils.TermField
+import com.fauna.learnfauna.NewAddress.Asset
 import faunadb.values._
 import grizzled.slf4j.Logging
 
@@ -37,26 +38,60 @@ import scala.concurrent.{ExecutionContext, Future}
 
 import faunadb.FaunaClient
 import faunadb.query._
-import faunadb.values. { FieldPath, ObjectV, Result, Value }
+import faunadb.values.{FieldPath, ObjectV, Result, Value}
 
-trait Address
+trait Region
 
-case class HomeAddress(city: String, state: String, dog:String) extends Address
+case class State(name: String)
 
-case class WorkAddress(city: String, state: String) extends Address
+case class MultiStates(name: String)
 
-case object EmptyAddress extends Address
+trait Address extends Region
+
+case class OldWorkAddress(city: String, state: String) extends Address
+
+trait NewAddress extends Region
+
+case class HomeAddress(city: String, state: String, dog: String) extends NewAddress
+
+case class WorkAddress(city: String, state: String) extends NewAddress
+
+case object EmptyAddress extends NewAddress
+
+case object Asset extends NewAddress
 
 object Address {
 
   implicit val addressTrait = Codec.Union[Address]("address")(
+    "oldWorkAddress" -> Codec.Record[OldWorkAddress]
+  )
+}
+
+object NewAddress {
+
+  implicit val newAddressTrait = Codec.Union[NewAddress]("newAddress")(
     "home" -> Codec.Record[HomeAddress],
     "work" -> Codec.Record[WorkAddress],
-    "empty" -> Codec.Record(EmptyAddress))
+    "empty" -> Codec.Record(EmptyAddress),
+    "asset" -> Codec.Record(Asset)
+  )
+
+
+  type Asset = Asset.type
 
 }
 
-case class Customer(id: Int, balance: Int, address: Address)
+// deeply nested traits
+// codec of type aliases
+// type parameters
+// codec on a type class
+
+
+case class Customer(id: Int, balance: Int, newAddress: Asset)
+
+case class ProtoCustomer(id: Int, balance: Int, address: Address, newAddress: NewAddress)
+
+case class NewCustomer[+T <: Region](id: Int, balance: Int, address: Address, newAddress: T)
 
 object Customer extends Logging {
 

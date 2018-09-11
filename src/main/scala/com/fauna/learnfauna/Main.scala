@@ -17,8 +17,10 @@
 package com.fauna.learnfauna
 
 
+import com.fauna.learnfauna.NewAddress.Asset
 import grizzled.slf4j.Logging
-import scala.concurrent.{ExecutionContext}
+
+import scala.concurrent.ExecutionContext
 import faunadb.FaunaClient
 
 object Main extends Logging {
@@ -56,11 +58,11 @@ object Main extends Logging {
 
   private def originalCustomerTests(implicit client: FaunaClient) = {
 
-    val cust1 = Customer(1, 100, HomeAddress("pc", "ut", "spot"))
-    val cust2 = Customer(2, 100, HomeAddress("sf", "ca", "fido"))
-    val cust3 = Customer(3, 100, WorkAddress("ny", "ny"))
-    val cust4 = Customer(4, 100, WorkAddress("sd", "ca"))
-    val cust5 = Customer(5, 100, EmptyAddress)
+    val cust1 = Customer(1, 100, Asset)
+    val cust2 = Customer(2, 100, Asset)
+    val cust3 = Customer(3, 100, Asset)
+    val cust4 = Customer(4, 100, Asset)
+    val cust5 = Customer(5, 100, Asset)
 
     val writeWork = for {
       //Initialize the Customer schema and wait for the creation to finish
