@@ -2,51 +2,33 @@
 package com.fauna.learnfauna
 
 
+import com.fauna.learnfauna.Address.EmptyType
 import com.fauna.learnfauna.FaunaUtils.TermField
 import faunadb.values._
 import grizzled.slf4j.Logging
 
 import scala.concurrent.{ExecutionContext, Future}
-
 import faunadb.FaunaClient
 import faunadb.query._
 import faunadb.values.Value
 
-trait Region
+trait Address
 
-case class State(name: String)
+case class HomeAddress(city: String, state: String, dog: String) extends Address
 
-case class MultiStates(name: String)
+case class WorkAddress(city: String, state: String) extends Address
 
-trait Address extends Region
-
-case class OldWorkAddress(city: String, state: String) extends Address
-
-trait NewAddress extends Region
-
-case class HomeAddress(city: String, state: String, dog: String) extends NewAddress with Address
-
-case class WorkAddress(city: String, state: String) extends NewAddress with Address
-
-case object EmptyAddress extends NewAddress with Address
-
-case object Asset extends NewAddress
+case object EmptyAddress extends Address
 
 object Address {
 
   implicit val addressTrait = Codec.Union[Address]("address")(
-    "oldWorkAddress" -> Codec.Record[OldWorkAddress]
-  )
-}
-
-object NewAddress {
-
-  implicit val newAddressTrait = Codec.Union[NewAddress]("newAddress")(
     "home" -> Codec.Record[HomeAddress],
     "work" -> Codec.Record[WorkAddress],
-    "empty" -> Codec.Record(EmptyAddress),
-    "asset" -> Codec.Record(Asset)
+    "empty" -> Codec.Record(EmptyAddress)
   )
+
+  type EmptyType = EmptyAddress.type
 }
 
 // deeply nested traits
@@ -55,11 +37,7 @@ object NewAddress {
 // codec on a type class
 
 
-case class Customer(id: Int, balance: Int, address: Address, newAddress: NewAddress)
-
-case class ProtoCustomer(id: Int, balance: Int, address: Address, newAddress: NewAddress)
-
-case class NewCustomer[+T <: Region](id: Int, balance: Int, address: Address, newAddress: T)
+case class Customer(id: Int, balance: Int, newAddress: Address)
 
 object Customer extends Logging {
 
