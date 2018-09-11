@@ -68,8 +68,10 @@ object Customer extends Logging {
   val CUSTOMER_CLASS = "customers"
   val CUSTOMER_INDEX = s"customer-byid"
 
-  implicit val newAddressUserCodec: Codec[Customer[HomeAddress]] = Codec.Record[Customer[HomeAddress]]
-  implicit val addressUserCodec: Codec[Customer[Address]] = Codec.Record[Customer[Address]]
+//  implicit val newAddressUserCodec: Codec[Customer[HomeAddress]] = Codec.Record[Customer[HomeAddress]
+//  implicit val addressUserCodec: Codec[Customer[Address]] = Codec.Record[Customer[Address]]
+
+  implicit def userCodec[A: Codec]: Codec[Customer[A]] = Codec.Record[Customer[A]]
 
   //Original Lesson Customer Operations
   def createCustomer(customer: Customer[HomeAddress])(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
@@ -87,7 +89,7 @@ object Customer extends Logging {
 
     val futureResult = client.query(
       Select("data", Get(Match(Index(Customer.CUSTOMER_INDEX), custID)))
-    ).map(value => value.to[Customer[Address]].get)
+    ).map(value => value.to[Customer[HomeAddress]].get)
 
     futureResult.foreach { customer =>
       logger.info(s"Read \'customer\' $custID: \n$customer")
