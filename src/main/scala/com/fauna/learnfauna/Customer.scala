@@ -81,7 +81,7 @@ object Customer extends Logging {
 //  implicit val addressUserCodec: Codec[Customer[Address]] = Codec.Record[Customer[Address]]
 
   private val genericCustCodec = Codec.Record[Customer[Region]]
-  implicit def custCodec[T]: Codec[Customer[T]] = genericCustCodec.asInstanceOf[Codec[Customer[T]]]
+  implicit def custCodec[T <: Region]: Codec[Customer[T]] = genericCustCodec.asInstanceOf[Codec[Customer[T]]]
 
   //Original Lesson Customer Operations
   def createCustomer(customer: Customer[HomeAddress])(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
