@@ -14,9 +14,10 @@ import faunadb.values.Value
 
 trait Region
 
-case class State(name: String)
+case class State(name: String) extends Region
 
-case class MultiStates(name: String)
+case class MultiStates(name: String) extends Region
+
 
 trait Address extends Region
 
@@ -29,6 +30,14 @@ case class HomeAddress(city: String, state: String, dog: String) extends NewAddr
 case class WorkAddress(city: String, state: String) extends NewAddress with Address
 
 case object EmptyAddress extends NewAddress with Address
+
+object Region {
+
+  implicit val regionTrait = Codec.Union[Region]("region")(
+    "state" -> Codec.Record[State],
+    "multiState" -> Codec.Record[MultiStates]
+  )
+}
 
 object Address {
 
@@ -71,7 +80,8 @@ object Customer extends Logging {
 //  implicit val newAddressUserCodec: Codec[Customer[HomeAddress]] = Codec.Record[Customer[HomeAddress]
 //  implicit val addressUserCodec: Codec[Customer[Address]] = Codec.Record[Customer[Address]]
 
-  implicit def userCodec[A: Codec]: Codec[Customer[A]] = Codec.Record[Customer[A]]
+  private val genericCustCodec = Codec.Record[Customer[Region]]
+  implicit def custCodec[T]: Codec[Customer[T]] = genericCustCodec.asInstanceOf[Codec[Customer[T]]]
 
   //Original Lesson Customer Operations
   def createCustomer(customer: Customer[HomeAddress])(implicit client: FaunaClient, ec: ExecutionContext): Future[Value] = {
@@ -83,7 +93,7 @@ object Customer extends Logging {
   }
 
 
-  def readCustomer(custID: Int)(implicit client: FaunaClient, ec: ExecutionContext): Future[Customer[Address]] = {
+  def readCustomer(custID: Int)(implicit client: FaunaClient, ec: ExecutionContext): Future[Customer[HomeAddress]] = {
 
     println(s"Reading Customer: $custID")
 

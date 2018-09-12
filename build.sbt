@@ -28,13 +28,5 @@ lazy val common =
   Seq(
     scalaVersion := "2.12.4",
     organization := "com.fauna",
-    version := "0.1",
-    scalacOptions ++= Seq(
-      "-deprecation",
-      "-feature",
-      "-Xlint",
-      "-Ypartial-unification",
-      "-target:jvm-1.8",
-      "-encoding", "UTF-8"
-    )
+    version := "0.1"
   )

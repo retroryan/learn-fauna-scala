@@ -67,25 +67,25 @@ object Main extends Logging {
       //Initialize the Customer schema and wait for the creation to finish
       _ <- Customer.createSchema
 
-      _ <- Customer.createCustomer(cust1)
+//      _ <- Customer.createCustomer(cust1)
 //      _ <- Customer.createCustomer(cust2)
-//      _ <- Customer.createCustomer(cust3)
+      _ <- Customer.createCustomer(cust3)
 //      _ <- Customer.createCustomer(cust4)
 //      _ <- Customer.createCustomer(cust5)
 
 
-      retCust1 <- Customer.readCustomer(1)
+//      retCust1 <- Customer.readCustomer(1)
 //      retCust2 <- Customer.readCustomer(2)
-//      retCust3 <- Customer.readCustomer(3)
+      retCust3 <- Customer.readCustomer(3)
 //      retCust4 <- Customer.readCustomer(4)
 //      retCust5 <- Customer.readCustomer(5)
 
 
     } yield {
 
-      logger.info(s"retCust1: $retCust1")
+//      logger.info(s"retCust1: $retCust1")
 //      logger.info(s"retCust2: $retCust2")
-//      logger.info(s"retCust3: $retCust3")
+      logger.info(s"retCust3: $retCust3")
 //      logger.info(s"retCust4: $retCust4")
 //      logger.info(s"retCust5: $retCust5")
 
